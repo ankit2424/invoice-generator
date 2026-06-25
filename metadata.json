@@ -1,0 +1,6 @@
+{
+  "name": "Invoice Generator backend",
+  "description": "Invoice generator backend with products, customers, and invoice API integrated with Google Sheets as the database.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
