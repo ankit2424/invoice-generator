@@ -30,6 +30,88 @@ async function startServer() {
   app.use(express.json());
 
   // === API ROUTES ===
+
+  // === MOCK DATABASE ENDPOINTS FOR FRONTEND ===
+  app.post("/api/mock-db/query", async (req, res) => {
+    try {
+      const { collectionPath, constraints } = req.body;
+      const { getCollectionData } = await import("./src/lib/firebase-admin.ts");
+      let items = getCollectionData(collectionPath);
+
+      if (constraints && Array.isArray(constraints)) {
+        for (const c of constraints) {
+          if (c.type === 'where') {
+            const { field, op, value } = c;
+            items = items.filter((item: any) => {
+              if (op === '==') return item[field] === value;
+              return true;
+            });
+          }
+        }
+      }
+      res.json({ success: true, data: items });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/mock-db/get-doc", async (req, res) => {
+    try {
+      const { collectionPath, id } = req.body;
+      const { getCollectionData } = await import("./src/lib/firebase-admin.ts");
+      const items = getCollectionData(collectionPath);
+      const item = items.find((i: any) => i.id === id);
+      res.json({ success: true, data: item || null });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/mock-db/add-doc", async (req, res) => {
+    try {
+      const { collectionPath, data } = req.body;
+      const { getCollectionData, saveCollectionData } = await import("./src/lib/firebase-admin.ts");
+      const items = getCollectionData(collectionPath);
+      const id = Math.random().toString(36).substring(2, 15);
+      const newItem = { ...data, id, createdAt: data.createdAt || new Date().toISOString() };
+      items.push(newItem);
+      saveCollectionData(collectionPath, items);
+      res.json({ success: true, data: newItem });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/mock-db/update-doc", async (req, res) => {
+    try {
+      const { collectionPath, id, data } = req.body;
+      const { getCollectionData, saveCollectionData } = await import("./src/lib/firebase-admin.ts");
+      const items = getCollectionData(collectionPath);
+      const index = items.findIndex((i: any) => i.id === id);
+      if (index !== -1) {
+        items[index] = { ...items[index], ...data, updatedAt: new Date().toISOString() };
+      } else {
+        items.push({ ...data, id, createdAt: new Date().toISOString() });
+      }
+      saveCollectionData(collectionPath, items);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/mock-db/delete-doc", async (req, res) => {
+    try {
+      const { collectionPath, id } = req.body;
+      const { getCollectionData, saveCollectionData } = await import("./src/lib/firebase-admin.ts");
+      let items = getCollectionData(collectionPath);
+      items = items.filter((i: any) => i.id !== id);
+      saveCollectionData(collectionPath, items);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
   
   // Healthcheck
   app.get("/api/health", (req, res) => {
@@ -39,13 +121,13 @@ async function startServer() {
   // Auth / Me
   app.get("/api/me", requireAuth, (req: AuthRequest, res) => {
     try {
-      if (!req.user?.uid || !req.user?.email) {
+      if (!req.user?.uid) {
         return res.status(400).json({ error: "Invalid user token" });
       }
       res.json({ 
         message: "Successfully verified with backend!",
         uid: req.user.uid, 
-        email: req.user.email 
+        email: req.user.email || "guest@local.dev"
       });
     } catch (error: any) {
       console.error("Auth error:", error);

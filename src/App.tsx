@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
 import { auth, googleProvider } from './lib/firebase.ts';
 import { LogOut, LayoutDashboard, Package, Users, FileText, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -28,6 +28,14 @@ export default function App() {
       await signInWithPopup(auth, googleProvider);
     } catch (e: any) {
       console.error(e);
+    }
+  };
+
+  const loginAnonymously = async () => {
+    try {
+      await signInAnonymously(auth);
+    } catch (e: any) {
+      console.error("Anonymous login error:", e);
     }
   };
 
@@ -82,6 +90,17 @@ export default function App() {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span className="relative z-10 group-hover:tracking-wide transition-all duration-300">Sign in with Google</span>
+          </button>
+
+          <button 
+            onClick={loginAnonymously} 
+            className="w-full mt-3 bg-white text-black border-2 border-black px-5 py-4 rounded-full font-bold hover:bg-gray-50 active:scale-[0.98] transition-all flex items-center justify-center gap-3 relative group overflow-hidden"
+          >
+            <motion.div 
+               className="absolute inset-0 bg-black/5 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" 
+            />
+            <UserCircle className="w-5 h-5 relative z-10 text-black" />
+            <span className="relative z-10 group-hover:tracking-wide transition-all duration-300">Continue as Guest</span>
           </button>
         </motion.div>
       </div>
@@ -161,12 +180,12 @@ export default function App() {
               <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full bg-gray-100" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center font-bold">
-                {user.email?.charAt(0).toUpperCase()}
+                {(user.email || 'Guest').charAt(0).toUpperCase()}
               </div>
             )}
             <div className="ml-3 overflow-hidden">
-              <p className="text-sm font-bold text-black truncate">{user.displayName || 'User'}</p>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-sm font-bold text-black truncate">{user.displayName || 'Guest Developer'}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email || 'guest@local.dev'}</p>
             </div>
           </div>
           <button
@@ -188,7 +207,7 @@ export default function App() {
             <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-black/10" referrerPolicy="no-referrer" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm">
-              {user.email?.charAt(0).toUpperCase()}
+              {(user.email || 'Guest').charAt(0).toUpperCase()}
             </div>
           )}
         </div>
