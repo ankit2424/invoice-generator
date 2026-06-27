@@ -64,7 +64,7 @@ export default function App() {
           className="bg-white p-10 rounded-[40px] border-2 border-black max-w-sm w-full text-center relative z-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
         >
           <div className="mb-8 mt-2">
-            <h1 className="text-4xl font-bold text-black tracking-tight mb-3 font-display uppercase">Creatiwise</h1>
+            <h1 className="text-4xl font-bold text-black tracking-tight mb-3 font-display uppercase">Invoicer</h1>
             <p className="text-gray-600 text-sm leading-relaxed max-w-[250px] mx-auto">Create beautiful invoices, manage your clients and track products seamlessly.</p>
           </div>
           

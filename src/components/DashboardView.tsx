@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, updateDoc, db } from '../lib/db';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, updateDoc, setDoc, db } from '../lib/db';
 import { Package, Users, FileText, ShoppingCart, Plus, Trash2, X, MessageSquare, Mail, ExternalLink, Send, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'motion/react';
