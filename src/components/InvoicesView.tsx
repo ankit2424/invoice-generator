@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, db } from '../lib/db';
 import { Plus, Edit2, Trash2, X, Download, Search, MessageSquare, Mail, ExternalLink, Filter, Send } from 'lucide-react';
 import { motion } from 'motion/react';
+import { printInvoiceLocally } from './DashboardView';
 
 export default function InvoicesView({ user }: { user: any }) {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -139,12 +139,34 @@ export default function InvoicesView({ user }: { user: any }) {
 
   const handleResendInvoice = async (invoiceId: string) => {
     try {
-      const res = await fetch(`/api/invoice/${invoiceId}/resend`, { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        alert("Invoice resent successfully");
+      if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+        const inv = invoices.find(i => i.invoiceIdStr === invoiceId);
+        if (inv) {
+          const invoiceRef = doc(db, "invoices", inv.id);
+          await updateDoc(invoiceRef, {
+            deliveryStatus: "Pending",
+            lastResentAt: new Date().toISOString()
+          });
+          setTimeout(async () => {
+            const isFailure = Math.random() < 0.5;
+            await updateDoc(invoiceRef, {
+              deliveryStatus: isFailure ? "Failed" : "Sent",
+              deliveryError: isFailure ? "Delivery provider timeout: 504 Gateway Time-out" : null
+            });
+            window.dispatchEvent(new Event('storage'));
+          }, 3000);
+          alert("Invoice resent successfully");
+        } else {
+          alert("Invoice not found locally");
+        }
       } else {
-        alert("Failed to resend: " + data.message);
+        const res = await fetch(`/api/invoice/${invoiceId}/resend`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert("Invoice resent successfully");
+        } else {
+          alert("Failed to resend: " + data.message);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -311,10 +333,32 @@ export default function InvoicesView({ user }: { user: any }) {
                       <button
                         onClick={async () => {
                           try {
-                            const res = await fetch(`/api/invoice/${invoice.invoiceIdStr}/resolve-mismatch`, { method: 'POST' });
-                            const data = await res.json();
-                            if (data.success) alert('Mismatch resolved successfully');
-                            else alert('Failed to resolve: ' + data.message);
+                            if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+                              const invoiceRef = doc(db, "invoices", invoice.id);
+                              const paymentAmount = invoice.paymentDetails?.amount || 0;
+                              await updateDoc(invoiceRef, {
+                                status: "Paid",
+                                paidAt: new Date().toISOString(),
+                                total: paymentAmount,
+                                invoiceUrl: `local-download://${invoice.invoiceIdStr}`,
+                                deliveryStatus: "Pending",
+                                reviewResolvedAt: new Date().toISOString()
+                              });
+                              setTimeout(async () => {
+                                const isFailure = Math.random() < 0.5;
+                                await updateDoc(invoiceRef, {
+                                  deliveryStatus: isFailure ? "Failed" : "Sent",
+                                  deliveryError: isFailure ? "Delivery provider timeout: 504 Gateway Time-out" : null
+                                });
+                                window.dispatchEvent(new Event('storage'));
+                              }, 3000);
+                              alert('Mismatch resolved successfully');
+                            } else {
+                              const res = await fetch(`/api/invoice/${invoice.invoiceIdStr}/resolve-mismatch`, { method: 'POST' });
+                              const data = await res.json();
+                              if (data.success) alert('Mismatch resolved successfully');
+                              else alert('Failed to resolve: ' + data.message);
+                            }
                           } catch (e) {
                             alert('Error resolving mismatch');
                           }
@@ -324,15 +368,19 @@ export default function InvoicesView({ user }: { user: any }) {
                         Accept & Fix
                       </button>
                     )}
-                    <a
-                      href={`/api/invoice/${invoice.invoiceIdStr}/download`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => {
+                        if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+                          printInvoiceLocally(invoice);
+                        } else {
+                          window.open(`/api/invoice/${invoice.invoiceIdStr}/download`, '_blank');
+                        }
+                      }}
                       className="text-black hover:text-gray-600 font-medium text-xs flex items-center gap-1 pr-2 border-r border-black/10"
                       title="Download PDF"
                     >
                       <Download className="w-4 h-4" /> PDF
-                    </a>
+                    </button>
                     {invoice.invoiceUrl && (
                       <>
                         <button

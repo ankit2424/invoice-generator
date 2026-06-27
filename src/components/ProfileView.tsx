@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc, db, collection, query, where, getDocs, updateDoc } from '../lib/db';
 import { Save, UserCircle, LogOut } from 'lucide-react';
 
-export default function ProfileView({ user, onLogout }: { user: any, onLogout?: () => void }) {
+export default function ProfileView({ user, onLogout, onUserUpdate }: { user: any, onLogout?: () => void, onUserUpdate?: (newUser: any) => void }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [profileId, setProfileId] = useState(user?.uid || '');
   const [formData, setFormData] = useState({
     name: user?.displayName || '',
     storeName: '',
     upiId: ''
   });
+
+  useEffect(() => {
+    if (user?.uid) {
+      setProfileId(user.uid);
+    }
+  }, [user?.uid]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -33,16 +39,54 @@ export default function ProfileView({ user, onLogout }: { user: any, onLogout?: 
       }
     };
     fetchProfile();
-  }, [user]);
+  }, [user?.uid]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    const sanitizedId = profileId.trim().replace(/\s+/g, '-');
+    if (!sanitizedId) {
+      alert("Profile ID cannot be empty");
+      setSaving(false);
+      return;
+    }
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        ...formData,
+      // 1. Save profile under new/current ID
+      await setDoc(doc(db, 'users', sanitizedId), {
+        name: formData.name,
+        storeName: formData.storeName,
+        upiId: formData.upiId,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+
+      // 2. Migrate associated data if profile ID was changed
+      if (sanitizedId !== user.uid) {
+        // Migrate products
+        const productsSnap = await getDocs(query(collection(db, "products"), where("userId", "==", user.uid)));
+        for (const productDoc of productsSnap.docs) {
+          await updateDoc(doc(db, "products", productDoc.id), { userId: sanitizedId });
+        }
+        // Migrate customers
+        const customersSnap = await getDocs(query(collection(db, "customers"), where("userId", "==", user.uid)));
+        for (const customerDoc of customersSnap.docs) {
+          await updateDoc(doc(db, "customers", customerDoc.id), { userId: sanitizedId });
+        }
+        // Migrate invoices
+        const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("userId", "==", user.uid)));
+        for (const invoiceDoc of invoicesSnap.docs) {
+          await updateDoc(doc(db, "invoices", invoiceDoc.id), { userId: sanitizedId });
+        }
+
+        // Notify App.tsx to update the active user's uid
+        if (onUserUpdate) {
+          onUserUpdate({
+            ...user,
+            uid: sanitizedId,
+            displayName: formData.name
+          });
+        }
+      }
+
       alert("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -63,6 +107,18 @@ export default function ProfileView({ user, onLogout }: { user: any, onLogout?: 
 
       <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profile ID (User ID)</label>
+            <input
+              type="text"
+              value={profileId}
+              onChange={(e) => setProfileId(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+              placeholder="e.g. dev-user-123"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
             <input

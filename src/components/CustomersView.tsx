@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, db } from '../lib/db';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 

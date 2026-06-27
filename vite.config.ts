@@ -9,9 +9,6 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
-        'firebase/app': path.resolve(__dirname, './src/lib/mock-firebase-app.ts'),
-        'firebase/auth': path.resolve(__dirname, './src/lib/mock-firebase-auth.ts'),
-        'firebase/firestore': path.resolve(__dirname, './src/lib/mock-firebase-firestore.ts'),
       },
     },
     server: {

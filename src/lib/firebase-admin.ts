@@ -198,5 +198,33 @@ class MockAdminDb {
   }
 }
 
-export const adminAuth = new MockAdminAuth();
-export const adminDb = new MockAdminDb();
+import { initializeApp as initAdminApp, getApps as getAdminApps, getApp as getAdminApp } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
+import config from '../../firebase-applet-config.json';
+
+export let adminAuth: any;
+export let adminDb: any;
+
+const useRealFirebase = process.env.VITE_USE_REAL_FIREBASE === 'true';
+
+if (useRealFirebase) {
+  console.log('Initializing REAL Firebase Admin...');
+  try {
+    const app = getAdminApps().length === 0 
+      ? initAdminApp({ projectId: config.projectId }) 
+      : getAdminApp();
+    adminAuth = getAdminAuth(app);
+    adminDb = config.firestoreDatabaseId 
+      ? getAdminFirestore(app, config.firestoreDatabaseId) 
+      : getAdminFirestore(app);
+  } catch (error) {
+    console.error('Failed to initialize REAL Firebase Admin, falling back to mock:', error);
+    adminAuth = new MockAdminAuth();
+    adminDb = new MockAdminDb();
+  }
+} else {
+  console.log('Initializing MOCK Firebase Admin (set VITE_USE_REAL_FIREBASE=true to use real Firebase)...');
+  adminAuth = new MockAdminAuth();
+  adminDb = new MockAdminDb();
+}

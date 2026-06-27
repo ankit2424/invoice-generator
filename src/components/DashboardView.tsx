@@ -1,10 +1,97 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, onSnapshot, updateDoc, db } from '../lib/db';
 import { Package, Users, FileText, ShoppingCart, Plus, Trash2, X, MessageSquare, Mail, ExternalLink, Send, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'motion/react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
+export const printInvoiceLocally = (invoiceData: any) => {
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    alert("Popup blocked! Please allow popups to print.");
+    return;
+  }
+  
+  const dateStr = new Date(invoiceData.createdAt || Date.now()).toLocaleDateString();
+  const totalAmount = Number(invoiceData.total || 0).toFixed(2);
+  const customerDetails = invoiceData.paymentDetails?.customerDetails;
+  
+  const itemsHtml = (invoiceData.items || []).map((item: any) => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.quantity}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">$${Number(item.price).toFixed(2)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee;">$${Number(item.price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Invoice ${invoiceData.invoiceIdStr}</title>
+      <style>
+        body { font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .details { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; }
+        .total { text-align: right; margin-top: 20px; font-size: 1.2em; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div>
+          <h1 style="margin: 0; font-size: 2.2em; font-weight: 800; text-transform: uppercase;">INVOICE</h1>
+          <p>Invoice #: ${invoiceData.invoiceIdStr}</p>
+          <p>Date: ${dateStr}</p>
+          <p>Status: ${invoiceData.status}</p>
+        </div>
+      </div>
+      
+      <div class="details">
+        <h3>Customer Details</h3>
+        ${customerDetails ? `
+          <p>Name: ${customerDetails.name || 'N/A'}</p>
+          <p>Email: ${customerDetails.email || 'N/A'}</p>
+          <p>Phone: ${customerDetails.phone || 'N/A'}</p>
+        ` : '<p>No customer details available</p>'}
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHtml}
+        </tbody>
+      </table>
+
+      <div class="total">
+        Total Amount: $${totalAmount}
+      </div>
+      
+      ${invoiceData.paymentDetails?.utr ? `
+      <div style="margin-top: 40px; font-size: 0.9em; color: #666;">
+        Payment UTR: ${invoiceData.paymentDetails.utr}
+      </div>` : ''}
+    </body>
+    </html>
+  `;
+  
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+  }, 250);
+};
 
 export default function DashboardView({ user }: { user: any }) {
   const [stats, setStats] = useState({
@@ -13,6 +100,7 @@ export default function DashboardView({ user }: { user: any }) {
     invoices: 0
   });
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
   
   // POS State
   const [products, setProducts] = useState<any[]>([]);
@@ -121,16 +209,25 @@ export default function DashboardView({ user }: { user: any }) {
   useEffect(() => {
     fetchDashboardData();
     
+    const timer = setTimeout(() => {
+      setIsMounted(true);
+    }, 500);
+    
+    let unsubscribe: (() => void) | undefined;
     if (user) {
       const q = query(collection(db, "invoices"), where("userId", "==", user.uid));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+      unsubscribe = onSnapshot(q, (snapshot) => {
         setStats(prev => ({ ...prev, invoices: snapshot.size }));
         const invoiceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         invoiceList.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         setRecentInvoices(invoiceList.slice(0, 10));
       });
-      return () => unsubscribe();
     }
+
+    return () => {
+      clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+    };
   }, [user]);
 
   const updateQuantity = (index: number, newQuantity: number) => {
@@ -182,30 +279,40 @@ export default function DashboardView({ user }: { user: any }) {
       
       const invoiceRef = await addDoc(collection(db, "invoices"), invoiceData);
       
-      const token = await user.getIdToken();
-      const res = await fetch("/api/payment/upi-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          amount: cartTotal,
-          invoiceId: invoiceIdStr,
-          customerName: customerName,
-          upiId: staffProfile?.upiId || '',
-          storeName: staffProfile?.storeName || ''
-        })
-      });
-      
-      if (!res.ok) {
-        throw new Error("Failed to create payment session");
+      let upiString = '';
+      if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+        const vpa = staffProfile?.upiId || 'merchant@upi';
+        const name = encodeURIComponent(staffProfile?.storeName || 'Our Shop');
+        const note = encodeURIComponent(`Payment for Invoice ${invoiceIdStr}`);
+        const formatAmount = parseFloat(cartTotal.toString()).toFixed(2);
+        upiString = `upi://pay?pa=${vpa}&pn=${name}&am=${formatAmount}&tn=${note}&tr=${invoiceIdStr}&cu=INR`;
+      } else {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/payment/upi-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount: cartTotal,
+            invoiceId: invoiceIdStr,
+            customerName: customerName,
+            upiId: staffProfile?.upiId || '',
+            storeName: staffProfile?.storeName || ''
+          })
+        });
+        
+        if (!res.ok) {
+          throw new Error("Failed to create payment session");
+        }
+        
+        const data = await res.json();
+        upiString = data.upiString;
       }
       
-      const data = await res.json();
-      
       setPaymentSession({
-        upiString: data.upiString,
+        upiString,
         invoiceIdStr,
         invoiceDocId: invoiceRef.id,
         amount: cartTotal
@@ -231,32 +338,120 @@ export default function DashboardView({ user }: { user: any }) {
     if (!paymentSession) return;
     setIsProcessing(true);
     try {
-      const res = await fetch("/api/payment/webhook", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-provider-signature": `sim-sig-${paymentSession.invoiceIdStr}`
-        },
-        body: JSON.stringify({
+      if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+        const utrVal = `UPI${Date.now()}`;
+        
+        // Prevent duplicate payment
+        const payDocRef = doc(db, "payments", utrVal);
+        const payDocSnap = await getDoc(payDocRef);
+        if (payDocSnap.exists()) {
+          alert("Transaction already processed");
+          setIsProcessing(false);
+          return;
+        }
+
+        await setDoc(payDocRef, {
           invoiceId: paymentSession.invoiceIdStr,
-          status: "SUCCESS",
-          utr: `UPI${Date.now()}`,
+          userId: user.uid,
+          utr: utrVal,
           amount: paymentSession.amount,
           paymentMethod: "UPI",
-          customerDetails: {
-            name: customerName,
-            phone: customerPhone,
-            email: customerEmail
+          status: "SUCCESS",
+          createdAt: new Date().toISOString()
+        });
+
+        // Add customer if needed
+        if (customerPhone) {
+          const custQ = query(collection(db, "customers"), where("phone", "==", customerPhone), where("userId", "==", user.uid));
+          const custSnap = await getDocs(custQ);
+          if (custSnap.empty) {
+            await addDoc(collection(db, "customers"), {
+              userId: user.uid,
+              name: customerName || "",
+              phone: customerPhone,
+              email: customerEmail || "",
+              customerCode: `CUST-${Date.now().toString().slice(-4)}`,
+              createdAt: new Date().toISOString()
+            });
+          }
+        }
+
+        const invoiceRef = doc(db, "invoices", paymentSession.invoiceDocId);
+        
+        const itemsToUse = cart.map(item => ({ name: item.name, quantity: item.quantity, price: item.price }));
+        const calculatedTotal = itemsToUse.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+        const paymentAmount = Number(paymentSession.amount);
+        const isMismatch = Math.abs(calculatedTotal - paymentAmount) > 0.01;
+        const newStatus = isMismatch ? "Review Required" : "Paid";
+
+        await updateDoc(invoiceRef, {
+          status: newStatus,
+          ...(newStatus === "Paid" ? { paidAt: new Date().toISOString() } : { reviewRequiredAt: new Date().toISOString() }),
+          invoiceUrl: newStatus === "Paid" ? `local-download://${paymentSession.invoiceIdStr}` : null,
+          deliveryStatus: newStatus === "Paid" ? "Pending" : null,
+          paymentDetails: {
+            utr: utrVal,
+            amount: paymentAmount,
+            calculatedTotal: calculatedTotal,
+            paymentMethod: "UPI",
+            customerDetails: {
+              name: customerName,
+              phone: customerPhone,
+              email: customerEmail
+            },
+            orderItems: itemsToUse
+          }
+        });
+
+        // Trigger snapshot updates
+        window.dispatchEvent(new Event('storage'));
+
+        // Simulate delivery
+        if (newStatus === "Paid") {
+          setTimeout(async () => {
+            const isFailure = Math.random() < 0.5;
+            await updateDoc(invoiceRef, {
+              deliveryStatus: isFailure ? "Failed" : "Sent",
+              deliveryError: isFailure ? "Delivery provider timeout: 504 Gateway Time-out" : null
+            });
+            window.dispatchEvent(new Event('storage'));
+          }, 3000);
+        }
+
+        setCart([]);
+        setCustomerName('');
+        setCustomerPhone('');
+        setCustomerEmail('');
+        setPaymentSession(null);
+        fetchDashboardData();
+      } else {
+        const res = await fetch("/api/payment/webhook", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "x-provider-signature": `sim-sig-${paymentSession.invoiceIdStr}`
           },
-          orderItems: cart.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price
-          })),
-          userId: user.uid
-        })
-      });
-      if (!res.ok) throw new Error("Webhook call failed");
+          body: JSON.stringify({
+            invoiceId: paymentSession.invoiceIdStr,
+            status: "SUCCESS",
+            utr: `UPI${Date.now()}`,
+            amount: paymentSession.amount,
+            paymentMethod: "UPI",
+            customerDetails: {
+              name: customerName,
+              phone: customerPhone,
+              email: customerEmail
+            },
+            orderItems: cart.map(item => ({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price
+            })),
+            userId: user.uid
+          })
+        });
+        if (!res.ok) throw new Error("Webhook call failed");
+      }
     } catch (e) {
       console.error(e);
       alert("Error simulating webhook");
@@ -375,25 +570,27 @@ export default function DashboardView({ user }: { user: any }) {
           <h3 className="text-lg font-bold text-gray-900">Revenue Overview</h3>
           <p className="text-sm text-gray-500">Last 7 days performance</p>
         </div>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData as any} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `$${val}`} />
-              <RechartsTooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="h-64 w-full min-w-0">
+          {isMounted && (
+            <ResponsiveContainer width="99%" height="100%">
+              <AreaChart data={chartData as any} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `$${val}`} />
+                <RechartsTooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </motion.div>
 
@@ -607,10 +804,32 @@ export default function DashboardView({ user }: { user: any }) {
                         <button
                           onClick={async () => {
                             try {
-                              const res = await fetch(`/api/invoice/${inv.invoiceIdStr}/resolve-mismatch`, { method: 'POST' });
-                              const data = await res.json();
-                              if (data.success) alert('Mismatch resolved successfully');
-                              else alert('Failed to resolve: ' + data.message);
+                              if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+                                const invoiceRef = doc(db, "invoices", inv.id);
+                                const paymentAmount = inv.paymentDetails?.amount || 0;
+                                await updateDoc(invoiceRef, {
+                                  status: "Paid",
+                                  paidAt: new Date().toISOString(),
+                                  total: paymentAmount,
+                                  invoiceUrl: `local-download://${inv.invoiceIdStr}`,
+                                  deliveryStatus: "Pending",
+                                  reviewResolvedAt: new Date().toISOString()
+                                });
+                                setTimeout(async () => {
+                                  const isFailure = Math.random() < 0.5;
+                                  await updateDoc(invoiceRef, {
+                                    deliveryStatus: isFailure ? "Failed" : "Sent",
+                                    deliveryError: isFailure ? "Delivery provider timeout: 504 Gateway Time-out" : null
+                                  });
+                                  window.dispatchEvent(new Event('storage'));
+                                }, 3000);
+                                alert('Mismatch resolved successfully');
+                              } else {
+                                const res = await fetch(`/api/invoice/${inv.invoiceIdStr}/resolve-mismatch`, { method: 'POST' });
+                                const data = await res.json();
+                                if (data.success) alert('Mismatch resolved successfully');
+                                else alert('Failed to resolve: ' + data.message);
+                              }
                             } catch (e) {
                               alert('Error resolving mismatch');
                             }
@@ -641,9 +860,19 @@ export default function DashboardView({ user }: { user: any }) {
                           </div>
                         )}
                         <div className="flex flex-wrap gap-3">
-                          <a href={`/api/invoice/${inv.invoiceIdStr}/download`} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 font-medium text-xs flex items-center gap-1" title="Download PDF">
+                          <button
+                            onClick={() => {
+                              if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+                                printInvoiceLocally(inv);
+                              } else {
+                                window.open(`/api/invoice/${inv.invoiceIdStr}/download`, '_blank');
+                              }
+                            }}
+                            className="text-indigo-600 hover:text-indigo-800 font-medium text-xs flex items-center gap-1"
+                            title="Download PDF"
+                          >
                             <Download className="w-3 h-3" /> PDF
-                          </a>
+                          </button>
                           {inv.invoiceUrl && (
                             <>
                               <button
@@ -672,10 +901,27 @@ export default function DashboardView({ user }: { user: any }) {
                               <button
                                 onClick={async () => {
                                   try {
-                                    const res = await fetch(`/api/invoice/${inv.invoiceIdStr}/resend`, { method: 'POST' });
-                                    const data = await res.json();
-                                    if (data.success) alert('Invoice resent successfully');
-                                    else alert('Failed to resend: ' + data.message);
+                                    if (import.meta.env.VITE_USE_REAL_FIREBASE !== 'true') {
+                                      const invoiceRef = doc(db, "invoices", inv.id);
+                                      await updateDoc(invoiceRef, {
+                                        deliveryStatus: "Pending",
+                                        lastResentAt: new Date().toISOString()
+                                      });
+                                      setTimeout(async () => {
+                                        const isFailure = Math.random() < 0.5;
+                                        await updateDoc(invoiceRef, {
+                                          deliveryStatus: isFailure ? "Failed" : "Sent",
+                                          deliveryError: isFailure ? "Delivery provider timeout: 504 Gateway Time-out" : null
+                                        });
+                                        window.dispatchEvent(new Event('storage'));
+                                      }, 3000);
+                                      alert('Invoice resent successfully');
+                                    } else {
+                                      const res = await fetch(`/api/invoice/${inv.invoiceIdStr}/resend`, { method: 'POST' });
+                                      const data = await res.json();
+                                      if (data.success) alert('Invoice resent successfully');
+                                      else alert('Failed to resend: ' + data.message);
+                                    }
                                   } catch (e) {
                                     alert('Error resending invoice');
                                   }

@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { signInWithPopup, signOut, signInAnonymously } from 'firebase/auth';
-import { auth, googleProvider } from './lib/firebase.ts';
 import { LogOut, LayoutDashboard, Package, Users, FileText, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import AnimatedIllustration from './components/AnimatedIllustration';
@@ -9,43 +7,37 @@ import ProductsView from './components/ProductsView';
 import CustomersView from './components/CustomersView';
 import InvoicesView from './components/InvoicesView';
 import ProfileView from './components/ProfileView';
+import { doc, onSnapshot, db } from './lib/db';
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>({
+    uid: 'dev-user-123',
+    email: 'developer@creatiwise.local',
+    displayName: 'Guest Developer',
+    photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=developer'
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {};
+  const loginAnonymously = async () => {};
+  const logout = async () => {};
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-      setUser(u);
-      setLoading(false);
+    if (!user?.uid) return;
+    const profileRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(profileRef, (docSnap: any) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUser((prevUser: any) => ({
+          ...prevUser,
+          displayName: data.name || prevUser.displayName,
+          email: data.email || prevUser.email || 'developer@creatiwise.local'
+        }));
+      }
     });
     return () => unsubscribe();
-  }, []);
-
-  const login = async () => {
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
-
-  const loginAnonymously = async () => {
-    try {
-      await signInAnonymously(auth);
-    } catch (e: any) {
-      console.error("Anonymous login error:", e);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
+  }, [user?.uid]);
 
   if (loading) {
     return (
@@ -113,7 +105,7 @@ export default function App() {
       case 'products': return <ProductsView user={user} />;
       case 'customers': return <CustomersView user={user} />;
       case 'invoices': return <InvoicesView user={user} />;
-      case 'profile': return <ProfileView user={user} onLogout={logout} />;
+      case 'profile': return <ProfileView user={user} onUserUpdate={(newUser) => setUser(newUser)} />;
       default: return <DashboardView user={user} />;
     }
   };
@@ -188,13 +180,7 @@ export default function App() {
               <p className="text-xs text-gray-500 truncate">{user.email || 'guest@local.dev'}</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center justify-center space-x-2 w-full px-4 py-3 text-sm text-black bg-white hover:bg-gray-50 rounded-full font-bold transition border border-black"
-          >
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </button>
+
         </div>
       </aside>
 
