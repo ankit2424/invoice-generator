@@ -1,14 +1,16 @@
-# UPI Receipt & Sales Record for Local Businesses
+# Payslipkit
 
-**Simple tool for Indian local businesses that take UPI payments.**
+**Quick payment receipts + daily sales record for local businesses.**
 
-After a customer pays via UPI, quickly create a payment receipt, share it on WhatsApp, and keep an automatic daily sales record — without complicated accounting software.
+Payslipkit helps local businesses create a payment proof (receipt/slip) after a customer pays, share it instantly on WhatsApp, and keep a simple automatic daily sales record — without complicated accounting software.
+
+Website: [payslipkit.com](https://payslipkit.com)
 
 ---
 
 ## Who is this for?
 
-Built for businesses that actually need payment proof and basic records:
+Built for businesses that need payment proof and basic records:
 
 - Salons & beauty parlours
 - Coaching / tuition centers
@@ -22,29 +24,30 @@ Not primarily for tiny kirana stores that rarely issue bills.
 
 ## What problem it solves
 
-Many local businesses accept UPI payments every day but:
+Many local businesses accept UPI (and other payments) every day but:
 
 - Have no quick way to give customers a payment proof
 - Struggle to keep simple daily sales records
 - Find full accounting software too heavy and complicated
 
-This project focuses on speed and simplicity.
+Payslipkit focuses on **speed and simplicity**.
 
 ---
 
-## Core Features (MVP Direction)
+## Core Features (MVP)
 
-- Shop / business profile (name, phone, UPI ID)
-- Quick receipt generation after UPI payment
-- WhatsApp share link for customers
-- Daily & basic sales summary
+- Business profile (name, phone, UPI / payment ID)
+- Quick receipt generation after payment
+- WhatsApp share for customers
+- Daily sales list + total
 - Receipt history
 - Simple and fast flow (minimum steps)
 
 **Later / Optional:**
-- GST-style formal invoice
+- Formal GST-style invoice
 - PDF download
-- Dynamic UPI QR (auto receipt after payment)
+- Dynamic QR (auto receipt after payment)
+- Multiple payment methods support
 - Email delivery
 
 ---
@@ -53,15 +56,16 @@ This project focuses on speed and simplicity.
 
 - **Frontend:** React 19 + Vite + Tailwind CSS
 - **Backend:** Node.js + Express (TypeScript)
-- **Database:** Firebase / planned PostgreSQL
-- **Other:** QR code, PDF support
+- **Database:** Firebase (Auth + Firestore)
+- **Hosting:** Firebase Hosting / Cloud
 
 ---
 
 ## Project Status
 
-This is an **early-stage open source project**.  
-Detailed documents (will be updated to match new positioning):
+Early-stage open source project.
+
+Detailed documents:
 
 - [Product Requirements (PRD)](./PRD.md)
 - [Technical Requirements (TRD)](./TRD.md)
@@ -71,21 +75,21 @@ Detailed documents (will be updated to match new positioning):
 
 ## License
 
-This project is released under the **MIT License**.  
+Released under the **MIT License**.  
 You are free to use, modify, and distribute it.
 
 ---
 
 ## Commercial / White-label
 
-If you want to:
+Want to:
 
 - Use this under your own brand
 - Offer it to multiple businesses as a service
 - Get setup help + priority support
 - Run a hosted version
 
-You can contact for **commercial / white-label licensing**.
+Contact for **commercial / white-label licensing**.
 
 ---
 
