@@ -10,15 +10,13 @@ Website: [payslipkit.com](https://payslipkit.com)
 
 ## Who is this for?
 
-Built for businesses that need payment proof and basic records:
+Built for businesses that need payment proof and basic daily records:
 
-- Salons & beauty parlours
+- Shops & retail stores
 - Coaching / tuition centers
+- Gyms & fitness centers
 - Small clinics & doctors
-- Mobile & electronics shops
-- Local service providers (AC repair, plumbing, etc.)
-
-Not primarily for tiny kirana stores that rarely issue bills.
+- Local businesses and service providers
 
 ---
 
