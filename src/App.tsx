@@ -12,7 +12,7 @@ import { doc, onSnapshot, db } from './lib/db';
 export default function App() {
   const [user, setUser] = useState<any>({
     uid: 'dev-user-123',
-    email: 'developer@creatiwise.local',
+    email: 'developer@payslipkit.local',
     displayName: 'Guest Developer',
     photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=developer'
   });
@@ -32,7 +32,7 @@ export default function App() {
         setUser((prevUser: any) => ({
           ...prevUser,
           displayName: data.name || prevUser.displayName,
-          email: data.email || prevUser.email || 'developer@creatiwise.local'
+          email: data.email || prevUser.email || 'developer@payslipkit.local'
         }));
       }
     });
@@ -64,8 +64,8 @@ export default function App() {
           className="bg-white p-10 rounded-[40px] border-2 border-black max-w-sm w-full text-center relative z-10 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
         >
           <div className="mb-8 mt-2">
-            <h1 className="text-4xl font-bold text-black tracking-tight mb-3 font-display uppercase">Invoicer</h1>
-            <p className="text-gray-600 text-sm leading-relaxed max-w-[250px] mx-auto">Create beautiful invoices, manage your clients and track products seamlessly.</p>
+            <h1 className="text-4xl font-bold text-black tracking-tight mb-3 font-display">Payslipkit</h1>
+            <p className="text-gray-600 text-sm leading-relaxed max-w-[250px] mx-auto">Quick payment receipts + daily sales record for local businesses.</p>
           </div>
           
           <button 
@@ -115,7 +115,7 @@ export default function App() {
       {/* Sidebar (Desktop) */}
       <aside className="hidden md:flex w-64 bg-white border-r border-black/10 flex-col shrink-0">
         <div className="h-20 flex items-center px-8 border-b border-black/10">
-          <h1 className="text-2xl font-bold text-black tracking-tight font-display lowercase">creatiwise.</h1>
+          <h1 className="text-2xl font-bold text-black tracking-tight font-display">Payslipkit</h1>
         </div>
         
         <div className="p-6 flex flex-col space-y-2 flex-1 overflow-y-auto">
@@ -152,7 +152,7 @@ export default function App() {
           >
             {activeTab === 'invoices' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
             <FileText size={20} />
-            <span>Invoices</span>
+            <span>Receipts</span>
           </button>
 
           <button
@@ -161,7 +161,7 @@ export default function App() {
           >
             {activeTab === 'profile' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
             <UserCircle size={20} />
-            <span>Staff Profile</span>
+            <span>Business Profile</span>
           </button>
         </div>
 
@@ -188,7 +188,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         {/* Mobile Header */}
         <div className="md:hidden bg-white border-b border-black/10 flex items-center justify-between px-6 sticky top-0 z-10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', minHeight: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
-          <h1 className="text-xl font-bold text-black tracking-tight font-display lowercase">creatiwise.</h1>
+          <h1 className="text-xl font-bold text-black tracking-tight font-display">Payslipkit</h1>
           {user.photoURL ? (
             <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-black/10" referrerPolicy="no-referrer" />
           ) : (
