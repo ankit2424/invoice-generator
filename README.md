@@ -1,35 +1,51 @@
-# UPI Invoice Generator for Small Shops
+# UPI Receipt & Sales Record for Local Businesses
 
-**Simple invoice system for Indian small businesses that accept UPI payments.**
+**Simple tool for Indian local businesses that take UPI payments.**
 
-Generate professional invoices after UPI QR payments, keep invoice history, and share with customers via WhatsApp or email — without needing a full POS or accounting software.
-
----
-
-## Why this exists
-
-Most kirana stores, salons, cafes and local shops in India take payments through UPI QR codes, but still create invoices manually. This causes delays, mistakes, and extra work during busy hours.
-
-This project aims to make that process fast and simple.
+After a customer pays via UPI, quickly create a payment receipt, share it on WhatsApp, and keep an automatic daily sales record — without complicated accounting software.
 
 ---
 
-## Features (Planned / In Progress)
+## Who is this for?
 
-- Shop profile setup (name, address, GSTIN, UPI ID, logo)
-- Static UPI QR support (MVP)
-- Manual UPI transaction reference entry → Instant invoice
-- Automatic invoice number generation
-- Tax calculation
-- PDF download
+Built for businesses that actually need payment proof and basic records:
+
+- Salons & beauty parlours
+- Coaching / tuition centers
+- Small clinics & doctors
+- Mobile & electronics shops
+- Local service providers (AC repair, plumbing, etc.)
+
+Not primarily for tiny kirana stores that rarely issue bills.
+
+---
+
+## What problem it solves
+
+Many local businesses accept UPI payments every day but:
+
+- Have no quick way to give customers a payment proof
+- Struggle to keep simple daily sales records
+- Find full accounting software too heavy and complicated
+
+This project focuses on speed and simplicity.
+
+---
+
+## Core Features (MVP Direction)
+
+- Shop / business profile (name, phone, UPI ID)
+- Quick receipt generation after UPI payment
 - WhatsApp share link for customers
-- Invoice history + search
-- Public invoice page for customers
+- Daily & basic sales summary
+- Receipt history
+- Simple and fast flow (minimum steps)
 
-**Coming later:**
-- Dynamic UPI QR (automatic invoice after payment)
-- Email / WhatsApp Business API delivery
-- Multi-shop support
+**Later / Optional:**
+- GST-style formal invoice
+- PDF download
+- Dynamic UPI QR (auto receipt after payment)
+- Email delivery
 
 ---
 
@@ -38,14 +54,14 @@ This project aims to make that process fast and simple.
 - **Frontend:** React 19 + Vite + Tailwind CSS
 - **Backend:** Node.js + Express (TypeScript)
 - **Database:** Firebase / planned PostgreSQL
-- **Other:** QR code generation, PDF support
+- **Other:** QR code, PDF support
 
 ---
 
 ## Project Status
 
 This is an **early-stage open source project**.  
-Detailed product and technical documents are available:
+Detailed documents (will be updated to match new positioning):
 
 - [Product Requirements (PRD)](./PRD.md)
 - [Technical Requirements (TRD)](./TRD.md)
@@ -65,7 +81,7 @@ You are free to use, modify, and distribute it.
 If you want to:
 
 - Use this under your own brand
-- Offer it to multiple shops as a service
+- Offer it to multiple businesses as a service
 - Get setup help + priority support
 - Run a hosted version
 
