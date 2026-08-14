@@ -1,6 +1,6 @@
 {
-  "name": "Invoice Generator backend",
-  "description": "Invoice generator backend with products, customers, and invoice API integrated with Google Sheets as the database.",
+  "name": "Payslipkit",
+  "description": "Quick payment receipts + daily sales record for local businesses.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
