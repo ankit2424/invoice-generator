@@ -10,24 +10,16 @@ Payslipkit helps local businesses that accept UPI (and other payments) quickly c
 
 It is designed for businesses that need basic payment proof and sales tracking, without the complexity of full accounting or POS software.
 
-## Why this positioning
-Very small kirana stores and roadside shops rarely issue formal invoices and have low technology comfort. The product therefore focuses on businesses that actually need receipts and basic records, while keeping the flow extremely simple.
-
 ## Target Users (Primary)
-- Salons and beauty parlours
+- Shops & retail stores
 - Coaching / tuition centers
-- Small clinics and doctors
-- Mobile and electronics shops
-- Local service providers (AC repair, plumbing, etc.)
+- Gyms & fitness centers
+- Small clinics & doctors
+- Local businesses and service providers
 
 ## Target Users (Secondary)
-- Slightly formal retail shops that sometimes need to give bills
 - Staff who handle billing in the above businesses
 - Customers who ask for payment proof
-
-## Non-Primary Target
-- Tiny kirana / general stores that almost never issue bills
-- Pure roadside stalls with no need for records
 
 ## Problem Statement
 Many local businesses accept payments every day but:
