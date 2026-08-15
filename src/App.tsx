@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, List, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import DashboardView from './components/DashboardView';
+import QuickReceiptView from './components/QuickReceiptView';
 import InvoicesView from './components/InvoicesView';
 import ProfileView from './components/ProfileView';
 import { doc, onSnapshot, db } from './lib/db';
@@ -96,10 +96,10 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'receipt': return <DashboardView user={user} />;
+      case 'receipt': return <QuickReceiptView user={user} />;
       case 'sales': return <InvoicesView user={user} />;
       case 'profile': return <ProfileView user={user} onUserUpdate={(newUser) => setUser(newUser)} />;
-      default: return <DashboardView user={user} />;
+      default: return <QuickReceiptView user={user} />;
     }
   };
 
