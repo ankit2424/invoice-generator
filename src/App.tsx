@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Package, Users, FileText, UserCircle } from 'lucide-react';
+import { FileText, List, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import AnimatedIllustration from './components/AnimatedIllustration';
 import DashboardView from './components/DashboardView';
-import ProductsView from './components/ProductsView';
-import CustomersView from './components/CustomersView';
 import InvoicesView from './components/InvoicesView';
 import ProfileView from './components/ProfileView';
 import { doc, onSnapshot, db } from './lib/db';
@@ -16,12 +13,11 @@ export default function App() {
     displayName: 'Guest Developer',
     photoURL: 'https://api.dicebear.com/7.x/bottts/svg?seed=developer'
   });
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>('receipt');
   const [loading, setLoading] = useState(false);
 
   const login = async () => {};
   const loginAnonymously = async () => {};
-  const logout = async () => {};
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -50,7 +46,6 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Decorative Doodles */}
         <div className="absolute top-[10%] left-[15%] opacity-20 pointer-events-none w-32 h-32 hidden md:block">
           <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M100 0L105 85L190 90L105 95L100 180L95 95L10 90L95 85L100 0Z" fill="black"/></svg>
         </div>
@@ -101,10 +96,8 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardView user={user} />;
-      case 'products': return <ProductsView user={user} />;
-      case 'customers': return <CustomersView user={user} />;
-      case 'invoices': return <InvoicesView user={user} />;
+      case 'receipt': return <DashboardView user={user} />;
+      case 'sales': return <InvoicesView user={user} />;
       case 'profile': return <ProfileView user={user} onUserUpdate={(newUser) => setUser(newUser)} />;
       default: return <DashboardView user={user} />;
     }
@@ -120,39 +113,21 @@ export default function App() {
         
         <div className="p-6 flex flex-col space-y-2 flex-1 overflow-y-auto">
           <button
-            onClick={() => setActiveTab('dashboard')}
-            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'dashboard' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
+            onClick={() => setActiveTab('receipt')}
+            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'receipt' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
           >
-            {activeTab === 'dashboard' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
-            <LayoutDashboard size={20} />
-            <span>Dashboard</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'products' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
-          >
-            {activeTab === 'products' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
-            <Package size={20} />
-            <span>Products</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('customers')}
-            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'customers' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
-          >
-            {activeTab === 'customers' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
-            <Users size={20} />
-            <span>Customers</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('invoices')}
-            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'invoices' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
-          >
-            {activeTab === 'invoices' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
+            {activeTab === 'receipt' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
             <FileText size={20} />
-            <span>Receipts</span>
+            <span>Quick Receipt</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('sales')}
+            className={`flex items-center space-x-3 px-4 py-3 rounded-full text-sm font-medium transition-all relative ${activeTab === 'sales' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'}`}
+          >
+            {activeTab === 'sales' && <motion.div layoutId="active-navIndicator" className="absolute left-1/2 -bottom-2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />}
+            <List size={20} />
+            <span>Daily Sales</span>
           </button>
 
           <button
@@ -165,9 +140,8 @@ export default function App() {
           </button>
         </div>
 
-        {/* User Card & Logout */}
         <div className="p-6 border-t border-black/10">
-          <div className="flex items-center mb-6 px-2">
+          <div className="flex items-center px-2">
             {user.photoURL ? (
               <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full bg-gray-100" referrerPolicy="no-referrer" />
             ) : (
@@ -180,7 +154,6 @@ export default function App() {
               <p className="text-xs text-gray-500 truncate">{user.email || 'guest@local.dev'}</p>
             </div>
           </div>
-
         </div>
       </aside>
 
@@ -211,22 +184,19 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden shrink-0 bg-white border-t border-black/10 flex justify-between px-4 py-2 z-20" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-        <button onClick={() => setActiveTab('dashboard')} className={`relative flex-1 flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'dashboard' ? 'text-black' : 'text-gray-400'}`}>
-          <LayoutDashboard size={22} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2} />
+      {/* Mobile Bottom Navigation - only 3 tabs */}
+      <nav className="md:hidden shrink-0 bg-white border-t border-black/10 flex justify-around px-4 py-2 z-20" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <button onClick={() => setActiveTab('receipt')} className={`relative flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'receipt' ? 'text-black' : 'text-gray-400'}`}>
+          <FileText size={22} strokeWidth={activeTab === 'receipt' ? 2.5 : 2} />
+          <span className="text-[10px] mt-1 font-medium">Receipt</span>
         </button>
-        <button onClick={() => setActiveTab('products')} className={`relative flex-1 flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'products' ? 'text-black' : 'text-gray-400'}`}>
-          <Package size={22} strokeWidth={activeTab === 'products' ? 2.5 : 2} />
+        <button onClick={() => setActiveTab('sales')} className={`relative flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'sales' ? 'text-black' : 'text-gray-400'}`}>
+          <List size={22} strokeWidth={activeTab === 'sales' ? 2.5 : 2} />
+          <span className="text-[10px] mt-1 font-medium">Sales</span>
         </button>
-        <button onClick={() => setActiveTab('invoices')} className={`relative flex-1 flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'invoices' ? 'text-black' : 'text-gray-400'}`}>
-          <FileText size={22} strokeWidth={activeTab === 'invoices' ? 2.5 : 2} />
-        </button>
-        <button onClick={() => setActiveTab('customers')} className={`relative flex-1 flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'customers' ? 'text-black' : 'text-gray-400'}`}>
-          <Users size={22} strokeWidth={activeTab === 'customers' ? 2.5 : 2} />
-        </button>
-        <button onClick={() => setActiveTab('profile')} className={`relative flex-1 flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'profile' ? 'text-black' : 'text-gray-400'}`}>
+        <button onClick={() => setActiveTab('profile')} className={`relative flex flex-col items-center p-2 min-w-0 transition-colors ${activeTab === 'profile' ? 'text-black' : 'text-gray-400'}`}>
           <UserCircle size={22} strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
+          <span className="text-[10px] mt-1 font-medium">Profile</span>
         </button>
       </nav>
     </div>
