@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, db, collection, query, where, getDocs, updateDoc } from '../lib/db';
-import { Save, UserCircle, LogOut } from 'lucide-react';
+import { doc, getDoc, setDoc, db } from '../lib/db';
+import { Save, UserCircle } from 'lucide-react';
 
-export default function ProfileView({ user, onLogout, onUserUpdate }: { user: any, onLogout?: () => void, onUserUpdate?: (newUser: any) => void }) {
+export default function ProfileView({
+  user,
+  onUserUpdate
+}: {
+  user: any;
+  onLogout?: () => void;
+  onUserUpdate?: (newUser: any) => void;
+}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profileId, setProfileId] = useState(user?.uid || '');
   const [formData, setFormData] = useState({
     name: user?.displayName || '',
     storeName: '',
+    phone: '',
     upiId: ''
   });
 
   useEffect(() => {
-    if (user?.uid) {
-      setProfileId(user.uid);
-    }
-  }, [user?.uid]);
-
-  useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) return;
+      if (!user?.uid) return;
       try {
         const docRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(docRef);
@@ -29,11 +30,12 @@ export default function ProfileView({ user, onLogout, onUserUpdate }: { user: an
           setFormData({
             name: data.name || user?.displayName || '',
             storeName: data.storeName || '',
+            phone: data.phone || '',
             upiId: data.upiId || ''
           });
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
+        console.error('Error fetching profile:', error);
       } finally {
         setLoading(false);
       }
@@ -43,140 +45,125 @@ export default function ProfileView({ user, onLogout, onUserUpdate }: { user: an
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    const sanitizedId = profileId.trim().replace(/\s+/g, '-');
-    if (!sanitizedId) {
-      alert("Profile ID cannot be empty");
-      setSaving(false);
+    if (!formData.storeName.trim()) {
+      alert('Please enter business name');
       return;
     }
+    setSaving(true);
     try {
-      // 1. Save profile under new/current ID
-      await setDoc(doc(db, 'users', sanitizedId), {
-        name: formData.name,
-        storeName: formData.storeName,
-        upiId: formData.upiId,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          name: formData.name.trim(),
+          storeName: formData.storeName.trim(),
+          phone: formData.phone.trim(),
+          upiId: formData.upiId.trim(),
+          updatedAt: new Date().toISOString()
+        },
+        { merge: true }
+      );
 
-      // 2. Migrate associated data if profile ID was changed
-      if (sanitizedId !== user.uid) {
-        // Migrate products
-        const productsSnap = await getDocs(query(collection(db, "products"), where("userId", "==", user.uid)));
-        for (const productDoc of productsSnap.docs) {
-          await updateDoc(doc(db, "products", productDoc.id), { userId: sanitizedId });
-        }
-        // Migrate customers
-        const customersSnap = await getDocs(query(collection(db, "customers"), where("userId", "==", user.uid)));
-        for (const customerDoc of customersSnap.docs) {
-          await updateDoc(doc(db, "customers", customerDoc.id), { userId: sanitizedId });
-        }
-        // Migrate invoices
-        const invoicesSnap = await getDocs(query(collection(db, "invoices"), where("userId", "==", user.uid)));
-        for (const invoiceDoc of invoicesSnap.docs) {
-          await updateDoc(doc(db, "invoices", invoiceDoc.id), { userId: sanitizedId });
-        }
-
-        // Notify App.tsx to update the active user's uid
-        if (onUserUpdate) {
-          onUserUpdate({
-            ...user,
-            uid: sanitizedId,
-            displayName: formData.name
-          });
-        }
+      if (onUserUpdate) {
+        onUserUpdate({
+          ...user,
+          displayName: formData.name.trim() || formData.storeName.trim()
+        });
       }
 
-      alert("Profile updated successfully");
+      alert('Profile saved');
     } catch (error) {
-      console.error("Error updating profile:", error);
-      alert("Failed to update profile");
+      console.error('Error updating profile:', error);
+      alert('Failed to save profile');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-gray-500">Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center text-gray-500">
+        Loading profile...
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="flex items-center space-x-3 mb-8">
-        <UserCircle size={32} className="text-indigo-600" />
-        <h2 className="text-2xl font-bold text-gray-800">Staff Profile</h2>
+    <div className="p-4 sm:p-8 max-w-lg mx-auto space-y-6">
+      <div className="flex items-center space-x-3">
+        <UserCircle size={28} className="text-black" />
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Business Profile</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Shown on receipts and WhatsApp messages.</p>
+        </div>
       </div>
 
-      <div className="bg-white border border-gray-100 shadow-sm rounded-xl p-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="bg-white border border-black/10 rounded-2xl p-5 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Profile ID (User ID)</label>
-            <input
-              type="text"
-              value={profileId}
-              onChange={(e) => setProfileId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
-              placeholder="e.g. dev-user-123"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
-              placeholder="e.g. John Doe"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Store / Business Name</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
+              Business name *
+            </label>
             <input
               type="text"
               value={formData.storeName}
               onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
-              placeholder="e.g. Acme Supermart"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black/10 focus:border-black outline-none"
+              placeholder="e.g. Sharma Coaching Center"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID for Payments</label>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
+              Your name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black/10 focus:border-black outline-none"
+              placeholder="e.g. Rahul Sharma"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
+              Phone
+            </label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black/10 focus:border-black outline-none"
+              placeholder="91XXXXXXXXXX"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1.5">
+              UPI ID / Payment ID
+            </label>
             <input
               type="text"
               value={formData.upiId}
               onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
-              placeholder="e.g. merchant@upi"
-              required
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-black/10 focus:border-black outline-none"
+              placeholder="e.g. business@upi"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Payments from generated QR codes will be sent to this UPI ID.
+            <p className="text-xs text-gray-400 mt-1">
+              Optional for now. Used later for QR / payment reference.
             </p>
           </div>
 
-          <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-4">
+          <div className="pt-2">
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center justify-center space-x-2 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition"
+              className="w-full flex items-center justify-center gap-2 bg-black text-white px-6 py-3.5 rounded-full font-bold hover:bg-gray-800 active:scale-[0.98] transition disabled:opacity-60"
             >
               <Save size={18} />
               <span>{saving ? 'Saving...' : 'Save Profile'}</span>
             </button>
-            {onLogout && (
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex items-center justify-center space-x-2 bg-gray-50 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-100 border border-gray-200 transition"
-              >
-                <LogOut size={18} />
-                <span>Sign Out</span>
-              </button>
-            )}
           </div>
         </form>
       </div>
